@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+    <h2 class="text-2xl font-bold">Driver Analysis</h2>
+
+    <!-- Driver summary -->
+    <div id="driver-summary" hx-get="/ui/partials/driver-summary" hx-trigger="load" hx-swap="innerHTML">
+        <div class="flex justify-center p-8">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+    </div>
+
+    <!-- Problem drivers -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title">Problem Drivers</h3>
+            <div id="problem-drivers" hx-get="/ui/partials/problem-drivers" hx-trigger="load" hx-swap="innerHTML">
+                <span class="loading loading-dots loading-sm"></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+    <h2 class="text-2xl font-bold">Alerts & Action Log</h2>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Watchdog Alerts -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title">Watchdog Alerts</h3>
+                <div id="watchdog-alerts" hx-get="/ui/partials/alerts" hx-trigger="load, every 15s" hx-swap="innerHTML">
+                    <span class="loading loading-dots loading-sm"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guardrail Action Log -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title">Action Log (Guardrails)</h3>
+                <div id="action-log" hx-get="/ui/partials/action-log" hx-trigger="load, every 10s" hx-swap="innerHTML">
+                    <span class="loading loading-dots loading-sm"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LLM Router Status -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title">LLM Router Status</h3>
+            <div id="router-status" hx-get="/ui/partials/router-status" hx-trigger="load, every 10s" hx-swap="innerHTML">
+                <span class="loading loading-dots loading-sm"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Knowledge Base Stats -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title">Knowledge Base</h3>
+            <div id="kb-stats" hx-get="/ui/partials/kb-stats" hx-trigger="load" hx-swap="innerHTML">
+                <span class="loading loading-dots loading-sm"></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+    <!-- System Info Banner -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body py-4">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="card-title text-primary">{{ snapshot.hostname }}</h2>
+                    <p class="text-sm opacity-70">{{ snapshot.os_version }}</p>
+                </div>
+                <div class="flex gap-4 text-sm">
+                    <div class="stat place-items-center p-0">
+                        <div class="stat-title text-xs">Uptime</div>
+                        <div class="stat-value text-lg">{{ "%.1f"|format(snapshot.uptime_hours) }}h</div>
+                    </div>
+                    <div class="stat place-items-center p-0">
+                        <div class="stat-title text-xs">Cores</div>
+                        <div class="stat-value text-lg">{{ snapshot.cpu.core_count_physical }}C/{{ snapshot.cpu.core_count_logical }}T</div>
+                    </div>
+                    <div class="stat place-items-center p-0">
+                        <div class="stat-title text-xs">RAM</div>
+                        <div class="stat-value text-lg">{{ snapshot.memory.total_gb }} GB</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Gauges -->
+    <div id="live-gauges" hx-get="/ui/partials/gauges" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <div class="flex justify-center p-8">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+    </div>
+
+    <!-- Two column layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Disk Usage -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-sm uppercase tracking-wide opacity-70">Disk Usage</h3>
+                {% for disk in snapshot.disks %}
+                <div class="mb-3">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-mono">{{ disk.mountpoint }}</span>
+                        <span>{{ disk.free_gb }} GB free / {{ disk.total_gb }} GB</span>
+                    </div>
+                    <progress
+                        class="progress w-full {% if disk.usage_percent < 80 %}progress-success{% elif disk.usage_percent < 90 %}progress-warning{% else %}progress-error{% endif %}"
+                        value="{{ disk.usage_percent }}" max="100">
+                    </progress>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Top Processes -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-sm uppercase tracking-wide opacity-70">Top Processes (CPU)</h3>
+                <div id="top-processes" hx-get="/ui/partials/processes" hx-trigger="load, every 10s" hx-swap="innerHTML">
+                    <span class="loading loading-dots loading-sm"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Alerts -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-sm uppercase tracking-wide opacity-70">Recent Alerts</h3>
+                <div id="recent-alerts" hx-get="/ui/partials/alerts" hx-trigger="load, every 15s" hx-swap="innerHTML">
+                    <span class="loading loading-dots loading-sm"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title text-sm uppercase tracking-wide opacity-70">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                    <a href="/ui/chat?q=Check+my+PC+health" class="btn btn-outline btn-primary btn-sm">Full Health Check</a>
+                    <a href="/ui/chat?q=Why+is+my+PC+slow" class="btn btn-outline btn-warning btn-sm">Why Am I Slow?</a>
+                    <a href="/ui/chat?q=Check+for+driver+issues" class="btn btn-outline btn-info btn-sm">Driver Check</a>
+                    <a href="/ui/chat?q=Scan+temp+files+for+cleanup" class="btn btn-outline btn-success btn-sm">Cleanup Scan</a>
+                    <a href="/ui/chat?q=Check+for+BSOD+crashes" class="btn btn-outline btn-error btn-sm">BSOD History</a>
+                    <a href="/ui/chat?q=Show+failed+services" class="btn btn-outline btn-secondary btn-sm">Failed Services</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

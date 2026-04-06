@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-bold">Event Log Analysis</h2>
+        <select class="select select-bordered select-sm" onchange="loadEvents(this.value)">
+            <option value="24">Last 24 hours</option>
+            <option value="48">Last 48 hours</option>
+            <option value="168">Last 7 days</option>
+        </select>
+    </div>
+
+    <!-- Event summary -->
+    <div id="event-summary" hx-get="/ui/partials/event-summary?hours=24" hx-trigger="load" hx-swap="innerHTML">
+        <div class="flex justify-center p-8">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+    </div>
+
+    <!-- Event list -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h3 class="card-title">Recent Errors & Critical Events</h3>
+            <div id="event-list" hx-get="/ui/partials/event-list?hours=24" hx-trigger="load" hx-swap="innerHTML">
+                <span class="loading loading-dots loading-sm"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadEvents(hours) {
+    htmx.ajax('GET', '/ui/partials/event-summary?hours=' + hours, '#event-summary');
+    htmx.ajax('GET', '/ui/partials/event-list?hours=' + hours, '#event-list');
+}
+</script>
+{% endblock %}

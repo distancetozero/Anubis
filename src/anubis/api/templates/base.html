@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anubis - PC Guardian</title>
+    <!-- Tailwind + DaisyUI via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+    <!-- Chart.js for trends -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        .gauge-ring { transition: stroke-dashoffset 0.5s ease; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .alert-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .htmx-settling { opacity: 0.8; }
+        .htmx-swapping { opacity: 0.5; transition: opacity 0.2s; }
+    </style>
+</head>
+<body class="bg-base-300 min-h-screen">
+    <!-- Navbar -->
+    <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
+        <div class="navbar-start">
+            <a href="/" class="btn btn-ghost text-xl">
+                <span class="text-primary">&#9764;</span> Anubis
+                <span class="badge badge-sm badge-primary ml-2">v0.1</span>
+            </a>
+        </div>
+        <div class="navbar-center">
+            <ul class="menu menu-horizontal px-1 gap-1">
+                <li><a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+                <li><a href="/ui/chat" class="{% if active_page == 'chat' %}active{% endif %}">Chat</a></li>
+                <li><a href="/ui/services" class="{% if active_page == 'services' %}active{% endif %}">Services</a></li>
+                <li><a href="/ui/drivers" class="{% if active_page == 'drivers' %}active{% endif %}">Drivers</a></li>
+                <li><a href="/ui/events" class="{% if active_page == 'events' %}active{% endif %}">Events</a></li>
+                <li><a href="/ui/cleanup" class="{% if active_page == 'cleanup' %}active{% endif %}">Cleanup</a></li>
+                <li><a href="/ui/alerts" class="{% if active_page == 'alerts' %}active{% endif %}">Alerts</a></li>
+            </ul>
+        </div>
+        <div class="navbar-end">
+            <div id="provider-status" hx-get="/ui/partials/provider-badge" hx-trigger="load, every 30s" hx-swap="innerHTML">
+                <span class="loading loading-dots loading-xs"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <main class="container mx-auto p-4 max-w-7xl">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-4 bg-base-100 text-base-content mt-8">
+        <div>
+            <p>Anubis PC Guardian &mdash; AI-powered Windows optimization &mdash; All inference runs locally or via free cloud APIs</p>
+        </div>
+    </footer>
+</body>
+</html>

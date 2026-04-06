@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex flex-col h-[calc(100vh-12rem)]">
+    <!-- Chat Messages -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto space-y-4 p-4 bg-base-100 rounded-t-box">
+        <div class="chat chat-start">
+            <div class="chat-bubble chat-bubble-primary">
+                Hello! I'm Anubis, your PC optimization assistant. Ask me anything about your system health, drivers, services, performance, or cleanup.
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Input -->
+    <div class="bg-base-100 p-4 rounded-b-box border-t border-base-300">
+        <form id="chat-form" hx-post="/ui/chat/send" hx-target="#chat-messages" hx-swap="beforeend" hx-on::after-request="this.reset(); scrollChat();">
+            <div class="flex gap-2">
+                <input
+                    type="text"
+                    name="query"
+                    placeholder="Ask about your PC... (e.g. 'Why is my computer slow?')"
+                    class="input input-bordered flex-1"
+                    autocomplete="off"
+                    autofocus
+                    required
+                >
+                <button type="submit" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
+                    Send
+                </button>
+            </div>
+        </form>
+        <div class="flex gap-2 mt-2 flex-wrap">
+            <button class="btn btn-xs btn-outline" onclick="sendQuick('Check my PC health')">Health Check</button>
+            <button class="btn btn-xs btn-outline" onclick="sendQuick('Why is my computer slow?')">Why Slow?</button>
+            <button class="btn btn-xs btn-outline" onclick="sendQuick('Check drivers')">Drivers</button>
+            <button class="btn btn-xs btn-outline" onclick="sendQuick('Scan temp files')">Cleanup</button>
+            <button class="btn btn-xs btn-outline" onclick="sendQuick('Show event log errors')">Events</button>
+            <button class="btn btn-xs btn-outline" onclick="sendQuick('Check disk health')">Disk Health</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function scrollChat() {
+    const el = document.getElementById('chat-messages');
+    setTimeout(() => el.scrollTop = el.scrollHeight, 100);
+}
+
+function sendQuick(query) {
+    const input = document.querySelector('input[name="query"]');
+    input.value = query;
+    document.getElementById('chat-form').requestSubmit();
+}
+
+// Auto-send if ?q= param exists
+const params = new URLSearchParams(window.location.search);
+const autoQuery = params.get('q');
+if (autoQuery) {
+    const input = document.querySelector('input[name="query"]');
+    input.value = autoQuery;
+    setTimeout(() => document.getElementById('chat-form').requestSubmit(), 500);
+}
+</script>
+{% endblock %}

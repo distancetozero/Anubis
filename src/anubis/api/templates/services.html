@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-bold">Windows Services</h2>
+        <div class="flex gap-2">
+            <button class="btn btn-sm btn-warning" hx-get="/ui/partials/failed-services" hx-target="#services-table" hx-swap="innerHTML">
+                Show Failed Only
+            </button>
+            <button class="btn btn-sm btn-primary" hx-get="/ui/partials/services-table" hx-target="#services-table" hx-swap="innerHTML">
+                Show All
+            </button>
+        </div>
+    </div>
+
+    <!-- Bloatware alert -->
+    <div id="bloatware-alert" hx-get="/ui/partials/bloatware-alert" hx-trigger="load" hx-swap="innerHTML"></div>
+
+    <!-- Services table -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body p-0">
+            <div id="services-table" hx-get="/ui/partials/services-table" hx-trigger="load" hx-swap="innerHTML">
+                <div class="flex justify-center p-8">
+                    <span class="loading loading-spinner loading-lg text-primary"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
