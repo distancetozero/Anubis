@@ -1,0 +1,32 @@
+# Anubis Configuration
+# Copy this to anubis.yaml and customize
+
+ollama:
+  host: http://localhost:11434
+  model: qwen3:14b
+  temperature: 0.1
+  context_length: 32768
+  timeout: 120
+
+monitoring:
+  poll_interval_seconds: 30
+  cpu_alert_threshold: 90.0
+  memory_alert_threshold: 85.0
+  disk_usage_alert_threshold: 90.0
+  temp_alert_threshold_celsius: 85.0
+  enable_smart_monitoring: true
+  enable_event_log_monitoring: true
+
+database:
+  url: sqlite+aiosqlite:///anubis_telemetry.db
+  echo: false
+
+api:
+  host: 127.0.0.1
+  port: 8484
+  reload: false
+
+agents:
+  orchestrator_mode: supervisor
+  max_agent_iterations: 10
+  enable_auto_fix: false
