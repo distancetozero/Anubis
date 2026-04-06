@@ -6,7 +6,6 @@ import asyncio
 
 import typer
 from rich.console import Console
-from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Prompt
@@ -34,8 +33,9 @@ async def _chat_loop() -> None:
 
     # Late imports to avoid slow startup for other commands
     from anubis.agents.graph import AnubisAgentGraph
+    from anubis.core.guardrails import GuardrailEngine
     from anubis.core.logging import setup_logging
-    from anubis.llm.ollama_client import OllamaClient
+    from anubis.llm.router import LLMRouter
     from anubis.llm.tool_registry import build_default_registry
 
     setup_logging(debug=False)
@@ -54,34 +54,35 @@ async def _chat_loop() -> None:
         )
     )
 
-    llm = OllamaClient(config.ollama)
+    # Initialize the LLM router (tries Ollama first, then Groq)
+    router = LLMRouter(config)
 
-    # Check Ollama connectivity
-    console.print("[dim]Checking Ollama connection...[/dim]")
-    if not await llm.check_health():
+    console.print("[dim]Checking available LLM providers...[/dim]")
+    provider_status = await router.check_providers()
+
+    connected = False
+    for name, healthy in provider_status.items():
+        status = "[green]connected[/green]" if healthy else "[red]unavailable[/red]"
+        console.print(f"  {name}: {status}")
+        if healthy:
+            connected = True
+
+    if not connected:
         console.print(
-            "[bold red]Cannot connect to Ollama.[/bold red]\n"
-            f"Make sure Ollama is running at {config.ollama.host}\n"
-            "Install: https://ollama.ai\n"
-            f"Then run: ollama pull {config.ollama.model}"
+            "\n[bold red]No LLM providers available.[/bold red]\n"
+            "Options:\n"
+            "  1. Start Ollama locally: ollama serve\n"
+            "  2. Set GROQ_API_KEY for free cloud inference: https://console.groq.com\n"
+            "  3. Configure another provider in anubis.yaml"
         )
-        await llm.close()
+        await router.close()
         return
 
-    # Ensure model is available
-    console.print(f"[dim]Checking model {config.ollama.model}...[/dim]")
-    if not await llm.ensure_model():
-        console.print(
-            f"[bold red]Model {config.ollama.model} not available.[/bold red]\n"
-            f"Run: ollama pull {config.ollama.model}"
-        )
-        await llm.close()
-        return
-
-    console.print("[green]Connected to Ollama. Ready![/green]\n")
+    console.print("[green]Ready![/green]\n")
 
     registry = build_default_registry()
-    graph = AnubisAgentGraph(llm, registry)
+    guardrails = GuardrailEngine()
+    graph = AnubisAgentGraph(router, registry, guardrails)
 
     while True:
         try:
@@ -92,6 +93,14 @@ async def _chat_loop() -> None:
         if query.lower() in ("quit", "exit", "q"):
             break
 
+        if query.lower() == "status":
+            _print_router_status(router)
+            continue
+
+        if query.lower() == "alerts":
+            console.print("[dim]No watchdog alerts yet.[/dim]")
+            continue
+
         if not query.strip():
             continue
 
@@ -101,12 +110,42 @@ async def _chat_loop() -> None:
             response = await graph.run(query)
             console.print()
             console.print(Panel(Markdown(response), title="Anubis", border_style="green"))
+
+            # Show pending actions if any
+            # (accessed via graph state — in production this would be tracked)
             console.print()
         except Exception as e:
             console.print(f"[bold red]Error:[/bold red] {e}")
 
-    await llm.close()
+    await router.close()
     console.print("[dim]Goodbye![/dim]")
+
+
+def _print_router_status(router) -> None:
+    """Print LLM router status."""
+    from anubis.llm.router import LLMRouter
+
+    status = router.get_status()
+    table = Table(title="LLM Router Status")
+    table.add_column("Provider", style="cyan")
+    table.add_column("Available")
+    table.add_column("Requests")
+    table.add_column("Failures")
+    table.add_column("Avg Latency")
+    table.add_column("Circuit Breaker")
+
+    for name, info in status["providers"].items():
+        avail = "[green]Yes[/green]" if info["available"] else "[red]No[/red]"
+        cb = "[red]OPEN[/red]" if info["circuit_breaker_open"] else "[green]Closed[/green]"
+        table.add_row(
+            name,
+            avail,
+            str(info["total_requests"]),
+            str(info["total_failures"]),
+            f"{info['avg_latency_ms']}ms",
+            cb,
+        )
+    console.print(table)
 
 
 @app.command()
@@ -135,29 +174,68 @@ async def _quick_scan() -> None:
 
     # CPU
     cpu_color = "green" if snapshot.cpu.usage_percent < 70 else "yellow" if snapshot.cpu.usage_percent < 90 else "red"
-    console.print(f"[bold]CPU:[/bold] [{cpu_color}]{snapshot.cpu.usage_percent}%[/{cpu_color}] "
-                  f"({snapshot.cpu.core_count_physical}C/{snapshot.cpu.core_count_logical}T @ {snapshot.cpu.frequency_mhz}MHz)")
+    console.print(
+        f"[bold]CPU:[/bold] [{cpu_color}]{snapshot.cpu.usage_percent}%[/{cpu_color}] "
+        f"({snapshot.cpu.core_count_physical}C/{snapshot.cpu.core_count_logical}T "
+        f"@ {snapshot.cpu.frequency_mhz}MHz)"
+    )
 
     # Memory
     mem_color = "green" if snapshot.memory.usage_percent < 70 else "yellow" if snapshot.memory.usage_percent < 85 else "red"
-    console.print(f"[bold]Memory:[/bold] [{mem_color}]{snapshot.memory.usage_percent}%[/{mem_color}] "
-                  f"({snapshot.memory.used_gb}/{snapshot.memory.total_gb} GB)")
+    console.print(
+        f"[bold]Memory:[/bold] [{mem_color}]{snapshot.memory.usage_percent}%[/{mem_color}] "
+        f"({snapshot.memory.used_gb}/{snapshot.memory.total_gb} GB)"
+    )
 
     # Disks
-    console.print(f"\n[bold]Disks:[/bold]")
+    console.print("\n[bold]Disks:[/bold]")
     for disk in snapshot.disks:
         disk_color = "green" if disk.usage_percent < 80 else "yellow" if disk.usage_percent < 90 else "red"
-        console.print(f"  {disk.mountpoint} [{disk_color}]{disk.usage_percent}%[/{disk_color}] "
-                      f"({disk.free_gb} GB free / {disk.total_gb} GB total)")
+        console.print(
+            f"  {disk.mountpoint} [{disk_color}]{disk.usage_percent}%[/{disk_color}] "
+            f"({disk.free_gb} GB free / {disk.total_gb} GB total)"
+        )
 
     # Temperatures
     if snapshot.temperatures:
-        console.print(f"\n[bold]Temperatures:[/bold]")
+        console.print("\n[bold]Temperatures:[/bold]")
         for temp in snapshot.temperatures:
             temp_color = "green" if temp.current_celsius < 70 else "yellow" if temp.current_celsius < 85 else "red"
             console.print(f"  {temp.label}: [{temp_color}]{temp.current_celsius}C[/{temp_color}]")
 
     console.print()
+
+
+@app.command()
+def providers() -> None:
+    """Check status of available LLM providers."""
+    asyncio.run(_check_providers())
+
+
+async def _check_providers() -> None:
+    """Check all configured LLM providers."""
+    config = AnubisConfig.load()
+    from anubis.llm.router import LLMRouter
+
+    router = LLMRouter(config)
+    status = await router.check_providers()
+
+    table = Table(title="LLM Provider Status")
+    table.add_column("Provider", style="cyan")
+    table.add_column("Status")
+    table.add_column("Model")
+    table.add_column("Endpoint")
+
+    for name, healthy in status.items():
+        s = "[green]Available[/green]" if healthy else "[red]Unavailable[/red]"
+        if name == "ollama":
+            table.add_row(name, s, config.ollama.model, config.ollama.host)
+        elif name == "groq":
+            key_status = "key set" if config.groq.api_key or __import__("os").environ.get("GROQ_API_KEY") else "NO KEY"
+            table.add_row(name, s, config.groq.model, f"{config.groq.base_url} ({key_status})")
+
+    console.print(table)
+    await router.close()
 
 
 @app.command()
@@ -173,6 +251,9 @@ def init() -> None:
     cfg = AnubisConfig()
     cfg.save()
     console.print("[green]Created anubis.yaml with default settings.[/green]")
+    console.print(
+        "[dim]Tip: Set GROQ_API_KEY environment variable for free cloud LLM access.[/dim]"
+    )
 
 
 @app.command()
@@ -182,7 +263,8 @@ def serve() -> None:
 
     config = AnubisConfig.load()
     console.print(
-        f"[bold cyan]Starting Anubis dashboard at http://{config.api.host}:{config.api.port}[/bold cyan]"
+        f"[bold cyan]Starting Anubis dashboard at "
+        f"http://{config.api.host}:{config.api.port}[/bold cyan]"
     )
     uvicorn.run(
         "anubis.api.app:create_app",
@@ -191,6 +273,22 @@ def serve() -> None:
         reload=config.api.reload,
         factory=True,
     )
+
+
+@app.command()
+def knowledge() -> None:
+    """Show knowledge base statistics."""
+    from anubis.knowledge.lookup import get_knowledge_stats
+
+    stats = get_knowledge_stats()
+    table = Table(title="Anubis Knowledge Base")
+    table.add_column("Category", style="cyan")
+    table.add_column("Entries", justify="right")
+    table.add_row("BSOD Stop Codes", str(stats["bsod_codes"]))
+    table.add_row("Event ID References", str(stats["event_ids"]))
+    table.add_row("Service References", str(stats["service_references"]))
+    table.add_row("Total", str(sum(stats.values())), style="bold")
+    console.print(table)
 
 
 if __name__ == "__main__":
