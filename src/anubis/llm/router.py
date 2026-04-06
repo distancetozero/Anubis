@@ -228,15 +228,21 @@ class GroqProvider(LLMProvider):
             msg = choice.get("message", {})
             elapsed = (time.monotonic() - start) * 1000
 
-            # Normalize tool calls format
+            # Normalize tool calls format (preserve id/type for OpenAI-compat APIs)
             tool_calls = []
             for tc in msg.get("tool_calls", []):
-                tool_calls.append({
+                normalized = {
                     "function": {
                         "name": tc.get("function", {}).get("name", ""),
                         "arguments": tc.get("function", {}).get("arguments", {}),
                     }
-                })
+                }
+                # Preserve id and type — required by OpenAI-compatible APIs
+                if "id" in tc:
+                    normalized["id"] = tc["id"]
+                if "type" in tc:
+                    normalized["type"] = tc["type"]
+                tool_calls.append(normalized)
 
             return LLMResponse(
                 content=msg.get("content", "") or "",
@@ -322,12 +328,17 @@ class OpenAICompatibleProvider(LLMProvider):
 
             tool_calls = []
             for tc in msg.get("tool_calls", []):
-                tool_calls.append({
+                normalized = {
                     "function": {
                         "name": tc.get("function", {}).get("name", ""),
                         "arguments": tc.get("function", {}).get("arguments", {}),
                     }
-                })
+                }
+                if "id" in tc:
+                    normalized["id"] = tc["id"]
+                if "type" in tc:
+                    normalized["type"] = tc["type"]
+                tool_calls.append(normalized)
 
             return LLMResponse(
                 content=msg.get("content", "") or "",

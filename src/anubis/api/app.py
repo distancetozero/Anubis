@@ -109,59 +109,65 @@ def create_app() -> FastAPI:
         from anubis.tools.system_health import get_system_snapshot
 
         snapshot = get_system_snapshot()
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "active_page": "dashboard",
-            "snapshot": snapshot,
-        })
+        return templates.TemplateResponse(
+            request=request,
+            name="dashboard.html",
+            context={"active_page": "dashboard", "snapshot": snapshot},
+        )
 
     @app.get("/ui/chat", response_class=HTMLResponse)
     async def chat_page(request: Request):
         """Chat interface page."""
-        return templates.TemplateResponse("chat.html", {
-            "request": request,
-            "active_page": "chat",
-        })
+        return templates.TemplateResponse(
+            request=request,
+            name="chat.html",
+            context={"active_page": "chat"},
+        )
 
     @app.get("/ui/services", response_class=HTMLResponse)
     async def services_page(request: Request):
         """Services management page."""
-        return templates.TemplateResponse("services.html", {
-            "request": request,
-            "active_page": "services",
-        })
+        return templates.TemplateResponse(
+            request=request,
+            name="services.html",
+            context={"active_page": "services"},
+        )
 
     @app.get("/ui/drivers", response_class=HTMLResponse)
     async def drivers_page(request: Request):
         """Driver analysis page."""
-        return templates.TemplateResponse("drivers.html", {
-            "request": request,
-            "active_page": "drivers",
-        })
+        return templates.TemplateResponse(
+            request=request,
+            name="drivers.html",
+            context={"active_page": "drivers"},
+        )
 
     @app.get("/ui/events", response_class=HTMLResponse)
     async def events_page(request: Request):
         """Event log analysis page."""
-        return templates.TemplateResponse("events.html", {
-            "request": request,
-            "active_page": "events",
-        })
+        return templates.TemplateResponse(
+            request=request,
+            name="events.html",
+            context={"active_page": "events"},
+        )
 
     @app.get("/ui/cleanup", response_class=HTMLResponse)
     async def cleanup_page(request: Request):
         """Disk cleanup page."""
-        return templates.TemplateResponse("cleanup.html", {
-            "request": request,
-            "active_page": "cleanup",
-        })
+        return templates.TemplateResponse(
+            request=request,
+            name="cleanup.html",
+            context={"active_page": "cleanup"},
+        )
 
     @app.get("/ui/alerts", response_class=HTMLResponse)
     async def alerts_page(request: Request):
         """Alerts and action log page."""
-        return templates.TemplateResponse("alerts.html", {
-            "request": request,
-            "active_page": "alerts",
-        })
+        return templates.TemplateResponse(
+            request=request,
+            name="alerts.html",
+            context={"active_page": "alerts"},
+        )
 
     # =========================================================================
     # HTMX Partials (HTML fragments for dynamic updates)
@@ -733,3 +739,7 @@ def create_app() -> FastAPI:
         return [dataclasses.asdict(p) for p in get_top_processes(sort_by=sort_by, limit=limit)]
 
     return app
+
+
+# Module-level app instance for uvicorn (uvicorn anubis.api.app:app)
+app = create_app()

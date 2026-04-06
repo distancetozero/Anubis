@@ -60,7 +60,7 @@ class AgentState(BaseModel):
 
     # Iteration counter (safety limit)
     iterations: int = 0
-    max_iterations: int = 10
+    max_iterations: int = 6
 
 
 # System prompts for each agent role
@@ -80,9 +80,14 @@ Available specialists:
 - performance_tuner: Power plans, startup optimization, boot time, memory diagnostics
 - cleanup_agent: Temp files, disk cleanup, DNS flush
 
-Route to the best specialist based on the user's query. If the query is broad (e.g. "check my PC health"), route to health_monitor first.
+Route to the SINGLE best specialist based on the user's query. If the query is broad (e.g. "check my PC health"), route to health_monitor.
 
-IMPORTANT: Never perform destructive actions without user confirmation. Always explain what you found and recommend actions before executing them.""",
+CRITICAL RULES:
+- Route to only ONE specialist per query. Do NOT chain multiple specialists.
+- Once you receive findings from a specialist, ALWAYS use RESPOND: to give the user a final answer.
+- Do NOT route to another specialist after receiving findings unless the user explicitly asks for more.
+- Never perform destructive actions without user confirmation.
+- Always explain what you found and recommend actions before executing them.""",
 
     AgentRole.HEALTH_MONITOR: """You are the Health Monitor agent for Anubis, a Windows PC optimization system.
 

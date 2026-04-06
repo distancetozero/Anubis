@@ -165,6 +165,7 @@ class AnubisAgentGraph:
         ]
 
         # Ask orchestrator what to do
+        has_findings = bool(state.findings)
         routing_prompt = {
             "role": "user",
             "content": (
@@ -177,8 +178,12 @@ class AnubisAgentGraph:
                 "- ROUTE:performance_tuner\n"
                 "- ROUTE:cleanup_agent\n"
                 "- RESPOND:<your final response to the user>\n\n"
-                "Use ROUTE if more information is needed. Use RESPOND if you have enough "
-                "findings to give the user a complete answer."
+                + (
+                    "You already have findings from specialists. You MUST use RESPOND: now to "
+                    "give the user a clear, helpful summary of the findings. Do NOT route again."
+                    if has_findings
+                    else "Use ROUTE to send the query to the single best specialist."
+                )
             ),
         }
         messages.append(routing_prompt)
@@ -282,6 +287,7 @@ class AnubisAgentGraph:
                 fn = tc.get("function", {})
                 tool_name = fn.get("name", "")
                 tool_args = fn.get("arguments", {})
+                tool_call_id = tc.get("id", "")
 
                 # Parse string arguments if needed (Groq returns JSON string)
                 if isinstance(tool_args, str):
@@ -329,10 +335,14 @@ class AnubisAgentGraph:
                         approved=True, result=result[:200], agent=role.value,
                     )
 
-                messages.append({
+                # Build tool result message (include tool_call_id for OpenAI-compat APIs)
+                tool_msg: dict[str, Any] = {
                     "role": "tool",
                     "content": result,
-                })
+                }
+                if tool_call_id:
+                    tool_msg["tool_call_id"] = tool_call_id
+                messages.append(tool_msg)
 
         # Return to orchestrator
         state.next_agent = AgentRole.ORCHESTRATOR
